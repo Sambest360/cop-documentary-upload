@@ -1,6 +1,6 @@
 # Documentary photo upload: Pastor Dr. Martin Appiah
 
-**The Church of Pentecost, Jesse Port Elizabeth Assembly**
+**The Church of Pentecost, Port Elizabeth Assembly**
 
 A simple page where church members upload photos for the pastor's documentary. Every photo goes straight into one private Google Drive folder. Visitors don't sign in or give their name. They choose photos and press upload.
 
@@ -42,7 +42,7 @@ The photos never pass through Vercel, so Vercel's 4.5 MB request limit doesn't a
 
 ### 1. Use a dedicated Google account (recommended)
 
-Create a Google account just for this project (e.g. `copjesse.documentary@gmail.com`). It comes with 15 GB free, which is shared across Gmail, Drive and Photos. Using a separate account keeps the pastor's or your personal Drive completely apart from this. You can buy more storage (Google One) if needed.
+Create a Google account just for this project (e.g. `coppe.documentary@gmail.com`). It comes with 15 GB free, which is shared across Gmail, Drive and Photos. Using a separate account keeps the pastor's or your personal Drive completely apart from this. You can buy more storage (Google One) if needed.
 
 ### 2. Create the Google key
 
@@ -69,11 +69,11 @@ npm run setup-google
 
 Paste the Client ID and secret when asked. A browser opens, and you sign in with the **project Google account**. Google may warn that the app "isn't verified". That's expected for your own app: click **Advanced → Go to COP Documentary Upload**.
 
-The script creates the folder **"Pastor Dr. Martin Appiah – Documentary Photos"** and prints 5 lines (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`, `DRIVE_FOLDER_ID`, `SESSION_SECRET`). Treat them like passwords.
+The script creates the folder **"Pastor Dr. Martin Appiah – Documentary Photos"** and saves the 5 secret settings to a file called `vercel.env` (they are never shown on screen).
 
 ### 4. Add the settings in Vercel
 
-Vercel → **cop-documentary-upload** → **Settings → Environment Variables**. Copy the 5 lines and paste them into the first **Key** box (Vercel splits them up for you). Tick **Production**, then **Save**.
+Vercel → **cop-documentary-upload** → **Settings → Environment Variables** → **Import .env** → choose `vercel.env` → tick **Production** → **Save**. Then delete `vercel.env` from your computer.
 
 `ALLOWED_ORIGINS` (`https://cop-documentary-upload.vercel.app`) and `MAX_FILE_MB` (`25`) are already set. If you add your own domain later, add it to `ALLOWED_ORIGINS`, separated by a comma.
 

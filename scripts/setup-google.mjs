@@ -2,19 +2,47 @@
 // One-time setup, run on your own computer:  npm run setup-google
 // 1. Signs in to the church's Google account (only asks for permission to manage files THIS app creates).
 // 2. Creates the private "documentary photos" folder in that Google Drive.
-// 3. Prints all 5 secret settings, ready to paste into Vercel in one go.
+// 3. Saves all 5 secret settings to "vercel.env" (never shown on screen), ready to import into Vercel.
 import http from 'node:http';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import { exec } from 'node:child_process';
 import readline from 'node:readline/promises';
 
 const FOLDER_NAME = 'Pastor Dr. Martin Appiah – Documentary Photos';
 const SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const OUT_FILE = path.resolve('vercel.env');
 
-const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-const clientId = process.env.GOOGLE_CLIENT_ID || (await rl.question('Paste your Google OAuth Client ID: ')).trim();
-const clientSecret = process.env.GOOGLE_CLIENT_SECRET || (await rl.question('Paste your Google OAuth Client secret: ')).trim();
-rl.close();
+function askHidden(question) {
+  return new Promise((resolve) => {
+    process.stdout.write(question);
+    const stdin = process.stdin;
+    let value = '';
+    const onData = (chunk) => {
+      for (const c of String(chunk)) {
+        if (c === '\r' || c === '\n') {
+          stdin.setRawMode(false); stdin.pause(); stdin.off('data', onData);
+          process.stdout.write(' (received)\n');
+          resolve(value.trim());
+          return;
+        }
+        if (c === '\u0003') process.exit(1); // Ctrl+C
+        if (c === '\u007f') { value = value.slice(0, -1); continue; } // Backspace
+        value += c;
+      }
+    };
+    stdin.setRawMode(true); stdin.resume(); stdin.on('data', onData);
+  });
+}
+
+let clientId = process.env.GOOGLE_CLIENT_ID || '';
+if (!clientId) {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  clientId = (await rl.question('Paste your Google OAuth Client ID: ')).trim();
+  rl.close();
+}
+const clientSecret = process.env.GOOGLE_CLIENT_SECRET || await askHidden('Paste your Google OAuth Client secret (it stays hidden), then press Enter: ');
 if (!clientId || !clientSecret) { console.error('Client ID and secret are required.'); process.exit(1); }
 
 const verifier = crypto.randomBytes(48).toString('base64url');
@@ -39,7 +67,8 @@ const code = await new Promise((resolve, reject) => {
       access_type: 'offline', prompt: 'consent', state, code_challenge: challenge, code_challenge_method: 'S256',
     }).toString();
     server._redirect = `http://127.0.0.1:${port}`;
-    console.log('\nOpen this link and sign in with the CHURCH Google account that should store the photos:\n\n' + auth + '\n');
+    console.log('\nYour browser is opening. Sign in with the CHURCH Google account that should store the photos.');
+    console.log('If it does not open, copy this link into your browser:\n\n' + auth + '\n\nWaiting for sign-in…');
     const opener = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start ""' : 'xdg-open';
     exec(`${opener} "${auth}"`, () => {});
   });
@@ -54,8 +83,8 @@ const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
 });
 const tokens = await tokenRes.json();
 if (!tokenRes.ok || !tokens.refresh_token) {
-  console.error('\nCould not get a refresh token:', tokens.error_description || tokens.error || tokenRes.status);
-  console.error('Tip: remove this app at https://myaccount.google.com/permissions and run the setup again.');
+  console.error('\nCould not finish sign-in:', tokens.error_description || tokens.error || tokenRes.status);
+  console.error('Check the Client secret, or remove this app at https://myaccount.google.com/permissions and run the setup again.');
   process.exit(1);
 }
 
@@ -67,18 +96,19 @@ const folderRes = await fetch('https://www.googleapis.com/drive/v3/files?fields=
 const folder = await folderRes.json();
 if (!folderRes.ok) { console.error('\nCould not create the folder:', folder.error?.message || folderRes.status); process.exit(1); }
 
-const sessionSecret = crypto.randomBytes(48).toString('base64url');
+const lines = [
+  'GOOGLE_CLIENT_ID=' + clientId,
+  'GOOGLE_CLIENT_SECRET=' + clientSecret,
+  'GOOGLE_REFRESH_TOKEN=' + tokens.refresh_token,
+  'DRIVE_FOLDER_ID=' + folder.id,
+  'SESSION_SECRET=' + crypto.randomBytes(48).toString('base64url'),
+];
+fs.writeFileSync(OUT_FILE, lines.join('\n') + '\n', { mode: 0o600 });
 
 console.log('\n✔ Signed in and created the folder "' + FOLDER_NAME + '"');
 console.log('  Open it in Google Drive: ' + folder.webViewLink);
-console.log('\nNext: Vercel → cop-documentary-upload → Settings → Environment Variables.');
-console.log('Copy the 5 lines between the dashes and paste them into the first "Key" box');
-console.log('(Vercel fills in all 5 at once). Tick Production, then Save, then Redeploy.');
-console.log('Keep these secret: do not post them anywhere or send them in chat.\n');
-console.log('----------------------------------------');
-console.log('GOOGLE_CLIENT_ID=' + clientId);
-console.log('GOOGLE_CLIENT_SECRET=' + clientSecret);
-console.log('GOOGLE_REFRESH_TOKEN=' + tokens.refresh_token);
-console.log('DRIVE_FOLDER_ID=' + folder.id);
-console.log('SESSION_SECRET=' + sessionSecret);
-console.log('----------------------------------------\n');
+console.log('\n✔ Saved the 5 secret settings to: ' + OUT_FILE);
+console.log('\nLast step: Vercel → cop-documentary-upload → Settings → Environment Variables');
+console.log('→ "Import .env" → choose that file → tick Production → Save → then Redeploy.');
+console.log('After importing, delete vercel.env. Never send it to anyone.\n');
+if (process.platform === 'darwin') exec(`open -R "${OUT_FILE}"`, () => {});
