@@ -60,6 +60,13 @@ if (!clientId) {
 }
 const clientSecret = process.env.GOOGLE_CLIENT_SECRET || await askHidden('Paste your Google OAuth Client secret (it stays hidden), then press Enter: ');
 if (!clientId || !clientSecret) fail('The Client ID and Client secret are both required.');
+if (/apps\.googleusercontent\.com$|^\d{6,}-/.test(clientSecret)) {
+  fail('What you pasted is the Client ID, not the Client secret.\n\nIn Google Cloud → Clients → your client, click "+ Add secret". Copy the new value that starts with GOCSPX- using the copy icon right next to it (not the Client ID\'s copy icon), then run the setup again.');
+}
+// Safe to show: Google itself displays the last 4 characters in the Client secrets list.
+console.log(`Secret received: ${clientSecret.slice(0, 7)}…${clientSecret.slice(-4)} (${clientSecret.length} characters).`);
+console.log('Check the last 4 characters match one of the secrets listed under "Client secrets" in Google Cloud.');
+if (!clientSecret.startsWith('GOCSPX-')) console.log('⚠ Google secrets normally start with GOCSPX- — this one does not, so it is probably the wrong value.');
 
 const verifier = crypto.randomBytes(48).toString('base64url');
 const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
