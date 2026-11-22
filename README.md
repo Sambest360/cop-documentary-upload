@@ -69,23 +69,15 @@ npm run setup-google
 
 Paste the Client ID and secret when asked. A browser opens, and you sign in with the **project Google account**. Google may warn that the app "isn't verified". That's expected for your own app: click **Advanced → Go to COP Documentary Upload**.
 
-The script creates the folder **"Pastor Dr. Martin Appiah – Documentary Photos"** and prints `GOOGLE_REFRESH_TOKEN` and `DRIVE_FOLDER_ID`. Treat them like passwords.
+The script creates the folder **"Pastor Dr. Martin Appiah – Documentary Photos"** and prints 5 lines (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`, `DRIVE_FOLDER_ID`, `SESSION_SECRET`). Treat them like passwords.
 
 ### 4. Add the settings in Vercel
 
-Vercel → your project → **Settings → Environment Variables**. Add these for **Production**:
+Vercel → **cop-documentary-upload** → **Settings → Environment Variables**. Copy the 5 lines and paste them into the first **Key** box (Vercel splits them up for you). Tick **Production**, then **Save**.
 
-| Name | Value |
-|---|---|
-| `GOOGLE_CLIENT_ID` | from step 2 |
-| `GOOGLE_CLIENT_SECRET` | from step 2 |
-| `GOOGLE_REFRESH_TOKEN` | from step 3 |
-| `DRIVE_FOLDER_ID` | from step 3 |
-| `SESSION_SECRET` | a long random string, made with `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"` |
-| `ALLOWED_ORIGINS` | your site address, e.g. `https://cop-documentary-upload.vercel.app` (no slash at the end; separate several with commas) |
-| `MAX_FILE_MB` | optional, default `25` |
+`ALLOWED_ORIGINS` (`https://cop-documentary-upload.vercel.app`) and `MAX_FILE_MB` (`25`) are already set. If you add your own domain later, add it to `ALLOWED_ORIGINS`, separated by a comma.
 
-Then **Deployments → ⋯ → Redeploy**, so the settings take effect.
+Then **Deployments → ⋯ (on the top one) → Redeploy**, so the settings take effect.
 
 ### 5. Recommended extra protection
 

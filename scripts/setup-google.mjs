@@ -2,7 +2,7 @@
 // One-time setup, run on your own computer:  npm run setup-google
 // 1. Signs in to the church's Google account (only asks for permission to manage files THIS app creates).
 // 2. Creates the private "documentary photos" folder in that Google Drive.
-// 3. Prints GOOGLE_REFRESH_TOKEN and DRIVE_FOLDER_ID to paste into Vercel.
+// 3. Prints all 5 secret settings, ready to paste into Vercel in one go.
 import http from 'node:http';
 import crypto from 'node:crypto';
 import { exec } from 'node:child_process';
@@ -67,9 +67,18 @@ const folderRes = await fetch('https://www.googleapis.com/drive/v3/files?fields=
 const folder = await folderRes.json();
 if (!folderRes.ok) { console.error('\nCould not create the folder:', folder.error?.message || folderRes.status); process.exit(1); }
 
+const sessionSecret = crypto.randomBytes(48).toString('base64url');
+
 console.log('\n✔ Signed in and created the folder "' + FOLDER_NAME + '"');
 console.log('  Open it in Google Drive: ' + folder.webViewLink);
-console.log('\nAdd these two values in Vercel → Project → Settings → Environment Variables.');
-console.log('Keep them secret: do not post them anywhere or send them in chat.\n');
+console.log('\nNext: Vercel → cop-documentary-upload → Settings → Environment Variables.');
+console.log('Copy the 5 lines between the dashes and paste them into the first "Key" box');
+console.log('(Vercel fills in all 5 at once). Tick Production, then Save, then Redeploy.');
+console.log('Keep these secret: do not post them anywhere or send them in chat.\n');
+console.log('----------------------------------------');
+console.log('GOOGLE_CLIENT_ID=' + clientId);
+console.log('GOOGLE_CLIENT_SECRET=' + clientSecret);
 console.log('GOOGLE_REFRESH_TOKEN=' + tokens.refresh_token);
-console.log('DRIVE_FOLDER_ID=' + folder.id + '\n');
+console.log('DRIVE_FOLDER_ID=' + folder.id);
+console.log('SESSION_SECRET=' + sessionSecret);
+console.log('----------------------------------------\n');
