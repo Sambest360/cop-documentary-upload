@@ -59,7 +59,9 @@ const code = await new Promise((resolve, reject) => {
     server.close();
     ok ? resolve({ code: url.searchParams.get('code'), redirect: server._redirect }) : reject(new Error(url.searchParams.get('error') || 'Sign-in failed'));
   });
-  server.listen(0, '127.0.0.1', () => {
+  // Fixed port, so it also works with a "Web application" client that lists http://127.0.0.1:53682
+  server.on('error', (e) => reject(new Error(e.code === 'EADDRINUSE' ? 'Port 53682 is busy. Close other setup windows and try again.' : e.message)));
+  server.listen(53682, '127.0.0.1', () => {
     const port = server.address().port;
     const auth = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     auth.search = new URLSearchParams({
