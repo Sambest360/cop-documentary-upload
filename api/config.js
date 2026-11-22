@@ -5,4 +5,4 @@ export default route('GET', async () => ({
   turnstileSiteKey: process.env.TURNSTILE_SITE_KEY || null,
   maxFileMB: MAX_FILE_MB,
   maxFilesPerRequest: MAX_FILES_PER_REQUEST,
-}), { limitPerMinute: 60 });
+}), { limitPerMinute: 60, requireOrigin: false });

@@ -51,6 +51,17 @@ test('config is public and has no secrets', async () => {
   assert.equal(r.status, 200);
   assert.deepEqual(Object.keys(r.body).sort(), ['maxFileMB', 'maxFilesPerRequest', 'turnstileSiteKey']);
   assert.equal(r.headers['cache-control'], 'no-store');
+  // same-origin GETs carry no Origin header in real browsers
+  assert.equal((await call(config, { method: 'GET', origin: null })).status, 200);
+});
+
+test('missing settings give a friendly error, not variable names', async () => {
+  const saved = process.env.SESSION_SECRET;
+  delete process.env.SESSION_SECRET;
+  const r = await call(session, { body: {} });
+  process.env.SESSION_SECRET = saved;
+  assert.equal(r.status, 503);
+  assert.ok(!/SESSION_SECRET/.test(r.body.error));
 });
 
 test('rejects other websites', async () => {

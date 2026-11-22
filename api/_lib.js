@@ -17,7 +17,10 @@ const EXT_TO_TYPE = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', w
 
 export function env(name) {
   const v = process.env[name];
-  if (!v) throw new HttpError(500, `Server is not configured (${name} missing).`);
+  if (!v) {
+    console.error(`Missing environment variable: ${name}`);
+    throw new HttpError(503, 'Uploads are not set up yet. Please contact the media team.');
+  }
   return v;
 }
 
@@ -33,11 +36,12 @@ export function send(res, status, body) {
 }
 
 // Wrap a handler: method check, origin check, rate limit, uniform errors.
-export function route(method, handler, { limitPerMinute = 30 } = {}) {
+export function route(method, handler, { limitPerMinute = 30, requireOrigin = true } = {}) {
   return async (req, res) => {
     try {
       if (req.method !== method) throw new HttpError(405, 'Method not allowed.');
-      const origin = checkOrigin(req);
+      // Browsers don't send Origin on same-origin GETs, so only state-changing routes require it.
+      const origin = requireOrigin ? checkOrigin(req) : null;
       rateLimit(clientIp(req), req.url || '', limitPerMinute);
       const body = method === 'POST' ? parseBody(req) : {};
       const out = await handler({ req, body, origin });
@@ -108,7 +112,10 @@ export function verifySession(token) {
 
 function sign(body) {
   const secret = env('SESSION_SECRET');
-  if (secret.length < 32) throw new HttpError(500, 'Server is not configured (SESSION_SECRET too short).');
+  if (secret.length < 32) {
+    console.error('SESSION_SECRET is too short (needs 32+ characters)');
+    throw new HttpError(503, 'Uploads are not set up yet. Please contact the media team.');
+  }
   return crypto.createHmac('sha256', secret).update(body).digest('base64url');
 }
 
