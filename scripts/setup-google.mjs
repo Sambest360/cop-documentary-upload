@@ -13,6 +13,21 @@ import readline from 'node:readline/promises';
 const FOLDER_NAME = 'Pastor Dr. Martin Appiah – Documentary Photos';
 const SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const OUT_FILE = path.resolve('vercel.env');
+const ERR_FILE = path.resolve('setup-error.txt');
+try { fs.unlinkSync(ERR_FILE); } catch {}
+
+// Shows a problem in a TextEdit window as well as Terminal (never includes any keys).
+function fail(message) {
+  const text = 'COP Documentary Upload – setup problem\n\n' + message + '\n';
+  console.error('\n✖ ' + message + '\n');
+  try {
+    fs.writeFileSync(ERR_FILE, text);
+    if (process.platform === 'darwin') exec(`open -e "${ERR_FILE}"`, () => {});
+  } catch {}
+  process.exit(1);
+}
+process.on('uncaughtException', (e) => fail(e.message));
+process.on('unhandledRejection', (e) => fail(String(e?.message || e)));
 
 function askHidden(question) {
   return new Promise((resolve) => {
@@ -43,7 +58,7 @@ if (!clientId) {
   rl.close();
 }
 const clientSecret = process.env.GOOGLE_CLIENT_SECRET || await askHidden('Paste your Google OAuth Client secret (it stays hidden), then press Enter: ');
-if (!clientId || !clientSecret) { console.error('Client ID and secret are required.'); process.exit(1); }
+if (!clientId || !clientSecret) fail('The Client ID and Client secret are both required.');
 
 const verifier = crypto.randomBytes(48).toString('base64url');
 const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
@@ -85,9 +100,10 @@ const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
 });
 const tokens = await tokenRes.json();
 if (!tokenRes.ok || !tokens.refresh_token) {
-  console.error('\nCould not finish sign-in:', tokens.error_description || tokens.error || tokenRes.status);
-  console.error('Check the Client secret, or remove this app at https://myaccount.google.com/permissions and run the setup again.');
-  process.exit(1);
+  const why = tokens.error_description || tokens.error || ('HTTP ' + tokenRes.status);
+  fail('Google sign-in did not finish: ' + why + '\n\n' + (/invalid_client|unauthorized/i.test(why)
+    ? 'The Client secret is wrong or incomplete. In Google Cloud open your client, click "Add secret", copy the new secret with the copy button, and run the setup again.'
+    : 'Remove "COP Documentary Upload" at https://myaccount.google.com/permissions (signed in as the church account) and run the setup again.'));
 }
 
 const folderRes = await fetch('https://www.googleapis.com/drive/v3/files?fields=id,webViewLink', {
@@ -96,7 +112,12 @@ const folderRes = await fetch('https://www.googleapis.com/drive/v3/files?fields=
   body: JSON.stringify({ name: FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' }),
 });
 const folder = await folderRes.json();
-if (!folderRes.ok) { console.error('\nCould not create the folder:', folder.error?.message || folderRes.status); process.exit(1); }
+if (!folderRes.ok) {
+  const why = folder.error?.message || ('HTTP ' + folderRes.status);
+  fail('Signed in, but could not create the Drive folder: ' + why + '\n\n' + (/not been used|disabled|accessNotConfigured/i.test(why)
+    ? 'Fix: in Google Cloud, search "Google Drive API" and click Enable. Wait 1 minute, then run the setup again.'
+    : 'Please send a screenshot of this message.'));
+}
 
 const lines = [
   'GOOGLE_CLIENT_ID=' + clientId,
@@ -107,6 +128,7 @@ const lines = [
 ];
 fs.writeFileSync(OUT_FILE, lines.join('\n') + '\n', { mode: 0o600 });
 
+console.log('\n(setup script version 3)');
 console.log('\n✔ Signed in and created the folder "' + FOLDER_NAME + '"');
 console.log('  Open it in Google Drive: ' + folder.webViewLink);
 console.log('\n✔ Saved the 5 secret settings to: ' + OUT_FILE);
