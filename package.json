@@ -1,0 +1,11 @@
+{
+  "name": "cop-documentary-photo-upload",
+  "private": true,
+  "type": "module",
+  "description": "Photo upload page for Pastor Dr. Martin Appiah's documentary – The Church of Pentecost, Jesse Port Elizabeth Assembly",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "setup-google": "node scripts/setup-google.mjs",
+    "test": "node --test test/*.test.js"
+  }
+}
