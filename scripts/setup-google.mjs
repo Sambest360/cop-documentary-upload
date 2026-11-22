@@ -39,7 +39,8 @@ function askHidden(question) {
         if (c === '\r' || c === '\n') {
           stdin.setRawMode(false); stdin.pause(); stdin.off('data', onData);
           process.stdout.write(' (received)\n');
-          resolve(value.trim());
+          // drop terminal paste markers and any invisible characters picked up while copying
+          resolve(value.replace(/\x1b\[20[01]~/g, '').replace(/[^\x21-\x7e]/g, ''));
           return;
         }
         if (c === '\u0003') process.exit(1); // Ctrl+C
@@ -101,8 +102,8 @@ const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
 const tokens = await tokenRes.json();
 if (!tokenRes.ok || !tokens.refresh_token) {
   const why = tokens.error_description || tokens.error || ('HTTP ' + tokenRes.status);
-  fail('Google sign-in did not finish: ' + why + '\n\n' + (/invalid_client|unauthorized/i.test(why)
-    ? 'The Client secret is wrong or incomplete. In Google Cloud open your client, click "Add secret", copy the new secret with the copy button, and run the setup again.'
+  fail('Google sign-in did not finish: ' + why + '\n\n' + (/invalid_client|unauthorized|client secret/i.test(why)
+    ? 'The Client secret does not match this Client ID. In Google Cloud → Google Auth Platform → Clients, open the client ending in …3o38, click "Add secret", copy the NEW secret with its copy button (it starts with GOCSPX-), and run the setup again.'
     : 'Remove "COP Documentary Upload" at https://myaccount.google.com/permissions (signed in as the church account) and run the setup again.'));
 }
 
